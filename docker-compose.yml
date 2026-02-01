@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  # ----------------- MySQL Database -----------------
+  db:
+    image: mysql:8.0
+    container_name: mydb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Kuala_Lumpur
+    ports:
+      - "3308:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./scripts:/docker-entrypoint-initdb.d # init/seed scripts
+    networks:
+      - fullstack-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ----------------- FastAPI Backend -----------------
+  backend:
+    build:
+      context: ./fastapi-app
+      dockerfile: Dockerfile
+    container_name: fastapi-app
+    restart: unless-stopped
+    volumes:
+      - ./fastapi-app:/app # hot reload
+      - /app/venv # prevent overwriting venv
+      - /app/__pycache__ # prevent overwriting cache
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1 # real-time logs
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - fullstack-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ----------------- Vite Frontend -----------------
+  frontend:
+    build:
+      context: ./vite-app
+      dockerfile: Dockerfile
+    container_name: vite-app
+    restart: unless-stopped
+    volumes:
+      - ./vite-app:/app # hot reload
+      - /app/node_modules # prevent overwriting node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true # ensures file changes detected inside Docker
+      - VITE_API_URL=http://localhost:8000 # backend API URL
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - fullstack-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5173/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  fullstack-network:
+    driver: bridge
+
+volumes:
+  db_data:
