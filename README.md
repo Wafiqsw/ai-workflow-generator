@@ -1,6 +1,48 @@
-# 🚀 Fullstack Development Setup
+# 🚀 Workflow Studio: AI-Powered Automation Engine
 
-A modern fullstack application template with FastAPI backend, React frontend, and MySQL database - all containerized with Docker for seamless development.
+Workflow Studio is a premium fullstack platform designed to bridge natural language prompts and automated technical workflows. It leverages Vector Databases and LLMs to understand user intent and execute complex API-driven tasks.
+
+---
+
+## 📺 System Preview
+
+### Core Interfaces
+| Dashboard | AI Chatbot |
+|-----------|------------|
+| ![Dashboard](docs/images/dashboard_v1.png) | ![Chatbot](docs/images/chatbot_v1.png) |
+
+| API Management | Upload System |
+|----------------|---------------|
+| ![API List](docs/images/list_api_v1.png) | ![Upload](docs/images/upload_api_v1.png) |
+
+---
+
+## 🧠 System Purpose & Flow
+
+The system is built around two primary engines that work in tandem to provide a seamless automation experience.
+
+### 1. API Knowledge Ingestion (CSV Processing)
+This engine handles the "education" of the AI. By uploading CSV files containing API specifications, the system builds a semantic map of available tools.
+
+![CSV Processing Flow](docs/images/csv_processing_flow.png)
+
+- **Upload & Normalize**: Raw CSV data is transformed into a standardized format.
+- **Vector Transformation**: Each API is converted into a high-dimensional vector using embedding models.
+- **Duplicate Detection**: The system checks the Vector DB to ensure no redundant data is stored.
+- **Dual Storage**: APIs are stored in a relational database for management and a Vector DB for semantic searching.
+
+### 2. AI-Powered Workflow Generation
+Once the system "knows" your APIs, users can simply describe what they want to achieve.
+
+![Workflow Generation Flow](docs/images/workflow_generation_flow.png)
+
+- **Natural Language Input**: Users interact via the AI Chatbot interface.
+- **Semantic Search**: The AI queries the Vector DB to find the most relevant APIs for the task.
+- **Feasibility Evaluation**: The system determines if the requested workflow can be constructed from available APIs.
+- **Code/Visual Generation**: Flows are generated as JSON (for low-code engines) or Python (for direct execution).
+- **Execution & Confirmation**: The Workflow Engine executes the tasks, providing the user with results for final confirmation.
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -22,16 +64,16 @@ Lightning-fast development with hot module replacement
 
 **FastAPI** + **Python 3.12**
 
-High-performance async API with automatic documentation
+High-performance async API with AI/ML integration capabilities
 
 ---
 
-### Database
+### Database & Search
 <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/mysql/mysql-original-wordmark.svg" alt="MySQL" width="80" height="80"/>
 
-**MySQL 8.0**
+**MySQL 8.0** + **Vector Database (Qdrant/Chroma)**
 
-Reliable relational database with full ACID compliance
+Reliable storage meets advanced semantic search
 
 ---
 
@@ -40,19 +82,17 @@ Reliable relational database with full ACID compliance
 
 **Docker** + **Docker Compose**
 
-Containerized development environment
+Containerized development and deployment
 
 </div>
 
 ## 📋 Features
 
-- ⚡ **Hot Reload** - Instant feedback on code changes
-- 🔒 **Type Safety** - TypeScript for frontend reliability
-- 📚 **Auto Documentation** - FastAPI generates interactive API docs
-- 🐳 **Containerized** - Consistent development environment
-- 🔄 **Health Checks** - Automated service monitoring
-- 🌐 **CORS Enabled** - Frontend-backend communication ready
-- 📦 **Volume Optimization** - No node_modules/venv conflicts
+- ⚡ **AI Chat Interface** - Generate workflows using natural language
+- 🔍 **Semantic API Search** - Vector-based discovery of available tools
+- 🔄 **Staged Processing** - Visual feedback for background AI tasks
+- 🐳 **Fullstack Docker** - Seamless "it works on my machine" experience
+- 🔒 **Enterprise Ready** - Integrated health checks and type safety
 
 ## 🚀 Quick Start
 
@@ -74,9 +114,6 @@ cp .env.example .env
 
 # Start all services
 docker-compose up -d
-
-# View logs
-docker-compose logs -f
 ```
 
 ### Access Services
@@ -86,7 +123,6 @@ docker-compose logs -f
 | 🎨 Frontend | http://localhost:5173 | React application |
 | ⚡ Backend API | http://localhost:8000 | FastAPI server |
 | 📖 API Docs | http://localhost:8000/docs | Interactive API documentation |
-| 🗄️ Database | localhost:3308 | MySQL server |
 
 ## 📁 Project Structure
 
@@ -95,159 +131,23 @@ fullstack-setup/
 ├── 🐳 docker-compose.yml      # Service orchestration
 ├── 📝 .env.example            # Environment template
 ├── 📚 docs/
+│   ├── images/                # Screenshots and flowcharts
 │   └── DOCKER_GUIDE.md        # Complete Docker documentation
 ├── 🔧 fastapi-app/            # Backend service
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app/
-│       ├── main.py            # FastAPI application
-│       └── api/               # API routes
 └── ⚛️ vite-app/               # Frontend service
-    ├── Dockerfile
-    ├── package.json
-    └── src/                   # React components
 ```
-
-## 🔧 Development
-
-### Backend Development
-
-```bash
-# View backend logs
-docker-compose logs -f backend
-
-# Access backend container
-docker-compose exec backend bash
-
-# Add Python package
-echo "package-name==1.0.0" >> fastapi-app/requirements.txt
-docker-compose up --build -d backend
-```
-
-### Frontend Development
-
-```bash
-# View frontend logs
-docker-compose logs -f frontend
-
-# Access frontend container
-docker-compose exec frontend sh
-
-# Add npm package
-docker-compose exec frontend npm install package-name
-```
-
-### Database Access
-
-```bash
-# Connect to MySQL
-mysql -h 127.0.0.1 -P 3308 -u user -p
-
-# Or via Docker
-docker-compose exec db mysql -u root -p
-```
-
-## 🐳 Docker Commands
-
-```bash
-# Start services
-docker-compose up -d
-
-# Stop services
-docker-compose down
-
-# Rebuild and start
-docker-compose up --build -d
-
-# View all logs
-docker-compose logs -f
-
-# Check service status
-docker-compose ps
-
-# Restart specific service
-docker-compose restart backend
-```
-
-## 📖 Documentation
-
-For comprehensive Docker setup guide, troubleshooting, and advanced usage, see:
-
-📘 **[Docker Guide](docs/DOCKER_GUIDE.md)**
-
-## 🌟 Tech Stack Details
-
-### Frontend Stack
-- **Vite 7.2+** - Next generation frontend tooling
-- **React 19** - Modern UI library with latest features
-- **TypeScript 5.9** - Type-safe JavaScript
-- **Axios** - HTTP client for API calls
-- **ESLint** - Code quality and consistency
-
-### Backend Stack
-- **FastAPI 0.115** - Modern Python web framework
-- **Uvicorn** - Lightning-fast ASGI server
-- **SQLAlchemy 2.0** - SQL toolkit and ORM
-- **PyMySQL** - Pure Python MySQL driver
-- **Pydantic** - Data validation using Python type hints
-
-### Database
-- **MySQL 8.0** - World's most popular open source database
-- **Persistent volumes** - Data survives container restarts
-- **Health checks** - Automated monitoring
-
-### DevOps
-- **Docker Compose 3.9** - Multi-container orchestration
-- **Health checks** - Service dependency management
-- **Hot reload** - Development productivity
-- **Volume optimization** - Fast file watching
-
-## 🔐 Environment Variables
-
-```bash
-# MySQL Configuration
-MYSQL_ROOT_PASSWORD=rootpassword
-MYSQL_DATABASE=myapp
-MYSQL_USER=user
-MYSQL_PASSWORD=password
-
-# Backend Configuration
-DATABASE_URL=mysql+pymysql://user:password@db:3306/myapp
-```
-
-⚠️ **Important**: Change default passwords before deploying to production!
-
-## 🎯 API Endpoints
-
-Once running, visit http://localhost:8000/docs for interactive API documentation powered by FastAPI's automatic OpenAPI generation.
-
-Default endpoints:
-- `GET /` - Health check
-- `GET /test` - Test endpoint
-
-## 🤝 Contributing
-
-1. Make your changes in the appropriate service directory
-2. Test locally with `docker-compose up -d`
-3. Ensure all services are healthy: `docker-compose ps`
-4. Submit your pull request
-
-## 📝 License
-
-This project is open source and available under the MIT License.
 
 ## 🆘 Support
 
 For issues and questions:
 - Check the [Docker Guide](docs/DOCKER_GUIDE.md)
-- Review service logs: `docker-compose logs -f`
 - Verify service health: `docker-compose ps`
 
 ---
 
 <div align="center">
 
-**Built with ❤️ using FastAPI, React, and Docker**
+**Built with ❤️ for AI-Driven Automation**
 
 ⭐ Star this repo if you find it helpful!
 
