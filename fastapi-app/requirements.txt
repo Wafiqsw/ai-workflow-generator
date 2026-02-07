@@ -113,3 +113,11 @@ chromadb==0.5.20
 pandas==2.2.3
 numpy<2.0.0  # Required for chromadb compatibility
 langchain-groq
+
+# Vector embeddings (sentence-transformers)
+sentence-transformers==5.2.2
+torch==2.10.0
+transformers==5.1.0
+
+# Email validation for Pydantic
+email-validator==2.1.0
