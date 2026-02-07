@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getWorkflows } from '../api/agents'
+import type { WorkflowSummary } from '../api/agents'
 
-// Mock workflow data
+// Mock workflow data (fallback)
 const mockWorkflows = [
     { id: '1', title: 'Customer Onboarding Flow', status: 'active', lastModified: '2 hours ago' },
     { id: '2', title: 'Data Processing Pipeline', status: 'active', lastModified: '5 hours ago' },
@@ -11,8 +13,40 @@ const mockWorkflows = [
     { id: '6', title: 'Report Generation System', status: 'archived', lastModified: '3 days ago' },
 ]
 
+interface DisplayWorkflow {
+    id: string
+    title: string
+    status: string
+    lastModified: string
+}
+
+function formatWorkflowName(name: string): string {
+    return name
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+}
+
 const Dashboard: React.FC = () => {
     const navigate = useNavigate()
+    const [workflows, setWorkflows] = useState<DisplayWorkflow[]>(mockWorkflows)
+
+    useEffect(() => {
+        getWorkflows()
+            .then((data: WorkflowSummary[]) => {
+                if (data.length > 0) {
+                    const mapped: DisplayWorkflow[] = data.map(w => ({
+                        id: w.id,
+                        title: formatWorkflowName(w.name),
+                        status: w.status,
+                        lastModified: w.created_at,
+                    }))
+                    setWorkflows(mapped)
+                }
+            })
+            .catch(() => {
+                // keep mock data on failure
+            })
+    }, [])
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -43,21 +77,21 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
                 <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-6 border-2 border-[var(--border-primary)] hover:shadow-gold-500/20 transition-all duration-300">
                     <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
-                        {mockWorkflows.filter(w => w.status === 'active').length}
+                        {workflows.filter(w => w.status === 'active').length}
                     </div>
                     <div className="text-base font-semibold text-[var(--text-secondary)]">Active Workflows</div>
                 </div>
 
                 <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-6 border-2 border-[var(--border-primary)] hover:shadow-gold-500/20 transition-all duration-300">
                     <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
-                        {mockWorkflows.filter(w => w.status === 'draft').length}
+                        {workflows.filter(w => w.status === 'draft').length}
                     </div>
                     <div className="text-base font-semibold text-[var(--text-secondary)]">Drafts</div>
                 </div>
 
                 <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-6 border-2 border-[var(--border-primary)] hover:shadow-gold-500/20 transition-all duration-300">
                     <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
-                        {mockWorkflows.length}
+                        {workflows.length}
                     </div>
                     <div className="text-base font-semibold text-[var(--text-secondary)]">Total Workflows</div>
                 </div>
@@ -68,7 +102,7 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">Your Workflows</h2>
 
                 <div className="space-y-3">
-                    {mockWorkflows.map((workflow) => (
+                    {workflows.map((workflow) => (
                         <div
                             key={workflow.id}
                             onClick={() => navigate(`/workflow/${workflow.id}`)}

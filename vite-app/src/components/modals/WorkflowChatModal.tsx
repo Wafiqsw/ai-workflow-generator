@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../Button'
 import { Loadingbar } from '../Loadingbar'
 import { queryAgent } from '../../api/agents'
@@ -24,6 +25,8 @@ interface WorkflowChatModalProps {
 }
 
 const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }) => {
+    const navigate = useNavigate()
+    const [generatedWorkflowId, setGeneratedWorkflowId] = useState<string | null>(null)
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 1,
@@ -149,6 +152,9 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
             await simulateStage(6, 600)
 
             addMessage('ai', response.content)
+            if (response.workflow_id) {
+                setGeneratedWorkflowId(response.workflow_id)
+            }
             setIsGenerating(false)
 
         } catch (error: any) {
@@ -188,6 +194,7 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
             { id: 6, name: 'Finalizing Output', status: 'pending', progress: 0, color: 'blue' },
         ])
         setIsGenerating(false)
+        setGeneratedWorkflowId(null)
     }
 
     const formatTime = (date: Date) => {
@@ -264,6 +271,21 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
 
                         {/* Input Area */}
                         <div className="p-6 border-t-2 border-[var(--border-secondary)] bg-[var(--bg-tertiary)]/30">
+                            {generatedWorkflowId && !isGenerating && (
+                                <button
+                                    onClick={() => {
+                                        onClose()
+                                        navigate(`/workflow/${generatedWorkflowId}`)
+                                    }}
+                                    className="w-full mb-3 px-5 py-3 bg-gradient-to-r from-gold-500 to-gold-600 rounded-xl font-bold text-base text-black shadow-lg hover:shadow-xl hover:shadow-gold-500/50 transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    View Workflow
+                                </button>
+                            )}
                             <div className="flex gap-3">
                                 <textarea
                                     value={inputValue}

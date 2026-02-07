@@ -1,9 +1,12 @@
-import React, { useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { WorkflowEditor } from '../components/workflow-editor/WorkflowEditor'
+import { getWorkflow } from '../api/agents'
+import type { WorkflowData } from '../api/agents'
+import { workflowToReactFlow } from '../utils/workflowTransform'
 import { mockStepsToN8n, n8nToReactFlow } from '../utils/n8nTransform'
 
-// Mock workflow data (same as Dashboard)
+// Mock workflow data (fallback for non-wf_ IDs)
 const mockWorkflows = [
   {
     id: '1',
@@ -61,19 +64,65 @@ const mockWorkflows = [
   },
 ]
 
+function formatWorkflowName(name: string): string {
+  return name
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
 const Workflow: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const isRealWorkflow = id?.startsWith('wf_')
 
-  const workflow = mockWorkflows.find(w => w.id === id)
+  const [realWorkflow, setRealWorkflow] = useState<WorkflowData | null>(null)
+  const [loading, setLoading] = useState(isRealWorkflow ?? false)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    if (!isRealWorkflow || !id) return
+    setLoading(true)
+    getWorkflow(id)
+      .then(setRealWorkflow)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }, [id, isRealWorkflow])
+
+  // Mock workflow fallback
+  const mockWorkflow = !isRealWorkflow ? mockWorkflows.find(w => w.id === id) : null
 
   const flowData = useMemo(() => {
-    if (!workflow) return { nodes: [], edges: [] }
-    const n8n = mockStepsToN8n(workflow.steps)
-    return n8nToReactFlow(n8n)
-  }, [workflow])
+    if (realWorkflow?.steps) {
+      return workflowToReactFlow(realWorkflow)
+    }
+    if (mockWorkflow) {
+      const n8n = mockStepsToN8n(mockWorkflow.steps)
+      return n8nToReactFlow(n8n)
+    }
+    return { nodes: [], edges: [] }
+  }, [realWorkflow, mockWorkflow])
 
-  if (!workflow) {
+  // Derive display values
+  const title = realWorkflow ? formatWorkflowName(realWorkflow.name) : mockWorkflow?.title
+  const description = realWorkflow
+    ? `${realWorkflow.steps.length} step workflow`
+    : mockWorkflow?.description
+  const status = realWorkflow?.status ?? mockWorkflow?.status
+  const createdAt = realWorkflow?.created_at ?? mockWorkflow?.createdAt
+  const lastModified = realWorkflow?.created_at ?? mockWorkflow?.lastModified
+
+  if (loading) {
+    return (
+      <div className="min-h-full flex items-center justify-center px-8 py-12">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-lg text-[var(--text-secondary)]">Loading workflow...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || (!realWorkflow && !mockWorkflow)) {
     return (
       <div className="min-h-full flex items-center justify-center px-8 py-12">
         <div className="text-center">
@@ -90,8 +139,8 @@ const Workflow: React.FC = () => {
     )
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (s: string) => {
+    switch (s) {
       case 'active':
         return 'text-green-400 bg-green-500/10 border-green-500/30'
       case 'draft':
@@ -105,21 +154,22 @@ const Workflow: React.FC = () => {
 
   return (
     <div className="min-h-full px-8 py-12 lg:px-16 lg:py-16">
-      {/* Back Button */}
       {/* Workflow Header */}
       <div className="mb-10">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-3xl lg:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-accent-500 mb-3 tracking-tight">
-              {workflow.title}
+              {title}
             </h1>
             <p className="text-base text-[var(--text-secondary)] font-medium mb-3">
-              {workflow.description}
+              {description}
             </p>
           </div>
-          <span className={`px-4 py-2 rounded-xl text-sm font-bold border-2 ${getStatusColor(workflow.status)} whitespace-nowrap`}>
-            {workflow.status.charAt(0).toUpperCase() + workflow.status.slice(1)}
-          </span>
+          {status && (
+            <span className={`px-4 py-2 rounded-xl text-sm font-bold border-2 ${getStatusColor(status)} whitespace-nowrap`}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-sm text-[var(--text-tertiary)]">
@@ -134,9 +184,13 @@ const Workflow: React.FC = () => {
           </button>
           <span className="opacity-30">|</span>
           <div className="flex items-center gap-4 font-medium">
-            <span>Created: {workflow.createdAt}</span>
-            <span className="opacity-30">•</span>
-            <span>Last modified: {workflow.lastModified}</span>
+            {createdAt && <span>Created: {createdAt}</span>}
+            {lastModified && (
+              <>
+                <span className="opacity-30">•</span>
+                <span>Last modified: {lastModified}</span>
+              </>
+            )}
           </div>
         </div>
       </div>

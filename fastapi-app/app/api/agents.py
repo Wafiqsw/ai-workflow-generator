@@ -1,3 +1,7 @@
+import json
+import os
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.agents.open_router import chat_with_gemini, run_agent_query
@@ -5,6 +9,8 @@ from app.services.vector_service import reindex_all_apis
 from typing import Optional, List, Dict, Any
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
+
+WORKFLOWS_DIR = Path(__file__).resolve().parent.parent.parent / "workflows"
 
 class ChatRequest(BaseModel):
     prompt: str
@@ -76,6 +82,43 @@ async def query_agent(request: AgentQueryRequest):
             score=0.0,
             reason=f"Technical Failure: {error_detail}"
         )
+
+@router.get("/workflows")
+async def list_workflows():
+    """List all saved workflows."""
+    workflows = []
+    if WORKFLOWS_DIR.exists():
+        for wf_dir in sorted(WORKFLOWS_DIR.iterdir()):
+            wf_file = wf_dir / "workflow.json"
+            if wf_dir.is_dir() and wf_file.exists():
+                try:
+                    data = json.loads(wf_file.read_text())
+                    steps = data.get("steps", [])
+                    if isinstance(steps, dict):
+                        steps = steps.get("raw_info", [])
+                    workflows.append({
+                        "id": data.get("id", wf_dir.name),
+                        "name": data.get("name", "Untitled"),
+                        "status": data.get("status", "draft"),
+                        "created_at": data.get("created_at", ""),
+                        "step_count": len(steps) if isinstance(steps, list) else 0,
+                    })
+                except (json.JSONDecodeError, OSError):
+                    continue
+    return workflows
+
+
+@router.get("/workflows/{workflow_id}")
+async def get_workflow(workflow_id: str):
+    """Return full workflow JSON for a given workflow ID."""
+    wf_file = WORKFLOWS_DIR / workflow_id / "workflow.json"
+    if not wf_file.exists():
+        raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
+    try:
+        return json.loads(wf_file.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        raise HTTPException(status_code=500, detail=f"Error reading workflow: {e}")
+
 
 @router.post("/reindex")
 async def reindex_apis():
