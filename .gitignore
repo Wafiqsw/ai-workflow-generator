@@ -42,6 +42,9 @@ Thumbs.db
 *.sql.gz
 *.db
 *.sqlite
+# Uploads
+fastapi-app/uploads/csv/
+
 # Workflows
 fastapi-app/workflows/*
 !fastapi-app/workflows/.gitkeep
