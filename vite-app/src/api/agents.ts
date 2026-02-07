@@ -43,6 +43,38 @@ export const getWorkflow = async (id: string): Promise<WorkflowData> => {
     return response.data;
 };
 
+// ── Workflow execution types & functions ─────────────────────────
+
+export interface TaskResult {
+    task_id: string;
+    status: 'success' | 'failed' | 'skipped' | 'running' | 'pending';
+    output: string | null;
+    return_value?: string | null;
+    error: string | null;
+    duration_ms: number;
+}
+
+export interface RunResponse {
+    job_id: string;
+}
+
+export interface RunStatus {
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    progress: number;
+    tasks: TaskResult[];
+    error: string | null;
+}
+
+export const runWorkflow = async (id: string): Promise<RunResponse> => {
+    const response = await axios.post<RunResponse>(`${API_URL}/agents/workflows/${id}/run`);
+    return response.data;
+};
+
+export const getRunStatus = async (workflowId: string, jobId: string): Promise<RunStatus> => {
+    const response = await axios.get<RunStatus>(`${API_URL}/agents/workflows/${workflowId}/runs/${jobId}`);
+    return response.data;
+};
+
 export const queryAgent = async (prompt: string): Promise<AgentQueryResponse> => {
     try {
         const response = await axios.post<AgentQueryResponse>(`${API_URL}/agents/query`, {
