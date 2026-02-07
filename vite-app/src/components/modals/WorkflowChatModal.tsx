@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '../Button'
 import { Loadingbar } from '../Loadingbar'
+import { queryAgent } from '../../api/agents'
 
 interface Message {
     id: number
@@ -33,15 +34,15 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
     ])
     const [inputValue, setInputValue] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
-    const [currentStageIndex, setCurrentStageIndex] = useState(-1)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const [stages, setStages] = useState<WorkflowStage[]>([
         { id: 1, name: 'Receiving Prompt', status: 'pending', progress: 0, color: 'blue' },
-        { id: 2, name: 'Checking Vector Database', status: 'pending', progress: 0, color: 'purple' },
+        { id: 2, name: 'AI Thinking & Vector Search', status: 'pending', progress: 0, color: 'purple' },
         { id: 3, name: 'Evaluating Feasibility', status: 'pending', progress: 0, color: 'gold' },
-        { id: 4, name: 'Generating Workflow Definition', status: 'pending', progress: 0, color: 'green' },
-        { id: 5, name: 'Preparing Execution', status: 'pending', progress: 0, color: 'blue' },
+        { id: 4, name: 'Generating Response', status: 'pending', progress: 0, color: 'green' },
+        { id: 5, name: 'Persisting Workflow Workspace', status: 'pending', progress: 0, color: 'purple' },
+        { id: 6, name: 'Finalizing Output', status: 'pending', progress: 0, color: 'blue' },
     ])
 
     useEffect(() => {
@@ -55,13 +56,15 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
     if (!isOpen) return null
 
     const addMessage = (type: 'user' | 'ai' | 'system', content: string) => {
-        const newMessage: Message = {
-            id: messages.length + 1,
-            type,
-            content,
-            timestamp: new Date()
-        }
-        setMessages(prev => [...prev, newMessage])
+        setMessages(prev => [
+            ...prev,
+            {
+                id: Date.now(),
+                type,
+                content,
+                timestamp: new Date()
+            }
+        ])
     }
 
     const updateStage = (stageId: number, status: WorkflowStage['status'], progress: number) => {
@@ -74,15 +77,17 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
         return new Promise((resolve) => {
             updateStage(stageId, 'in-progress', 0)
             let progress = 0
+            const step = 100 / (duration / 100)
             const interval = setInterval(() => {
-                progress += 10
-                updateStage(stageId, 'in-progress', progress)
+                progress += step
                 if (progress >= 100) {
                     clearInterval(interval)
                     updateStage(stageId, 'completed', 100)
                     resolve()
+                } else {
+                    updateStage(stageId, 'in-progress', Math.round(progress))
                 }
-            }, duration / 10)
+            }, 100)
         })
     }
 
@@ -93,61 +98,68 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
         setInputValue('')
         addMessage('user', userPrompt)
         setIsGenerating(true)
-        setCurrentStageIndex(0)
+        setStages(prev => prev.map(s => ({ ...s, status: 'pending', progress: 0 })))
+
+        // Helper for animated progress while waiting
+        const startDynamicProgress = (stageId: number, maxProgress: number = 90, speed: number = 200) => {
+            let progress = 0
+            updateStage(stageId, 'in-progress', 0)
+            return setInterval(() => {
+                if (progress < maxProgress) {
+                    progress += Math.random() * 5
+                    updateStage(stageId, 'in-progress', Math.min(Math.round(progress), maxProgress))
+                }
+            }, speed)
+        }
 
         try {
             // Stage 1: Receiving Prompt
-            await new Promise(resolve => setTimeout(resolve, 500))
-            addMessage('ai', '✅ I received your request! Let me analyze what you need...')
-            await simulateStage(1, 1500)
-            setCurrentStageIndex(1)
+            await simulateStage(1, 800)
+            addMessage('system', '✅ AI processing started: Searching for relevant APIs...')
 
-            // Stage 2: Checking Vector Database
-            await new Promise(resolve => setTimeout(resolve, 300))
-            addMessage('system', '🔍 Searching vector database for relevant APIs...')
-            await simulateStage(2, 2000)
-            addMessage('ai', '✅ Found 12 relevant APIs that match your requirements!')
-            setCurrentStageIndex(2)
+            // Stage 2: Thinking & Search (Real AI Call)
+            const stage2Interval = startDynamicProgress(2, 95, 400)
+
+            const response = await queryAgent(userPrompt)
+
+            clearInterval(stage2Interval)
+            updateStage(2, 'completed', 100)
 
             // Stage 3: Evaluating Feasibility
-            await new Promise(resolve => setTimeout(resolve, 300))
-            addMessage('system', '🤔 Evaluating workflow feasibility...')
-            await simulateStage(3, 1500)
+            const feasibilityStatus = response.is_feasible ? 'completed' : 'failed'
+            updateStage(3, feasibilityStatus, 100)
 
-            // Random feasibility check
-            const isFeasible = Math.random() > 0.2 // 80% success rate
-
-            if (!isFeasible) {
-                updateStage(3, 'failed', 100)
-                addMessage('ai', '❌ I\'m sorry, but this workflow is not feasible with the current available APIs. Could you try rephrasing your request or simplifying the workflow?')
+            if (!response.is_feasible) {
+                addMessage('ai', response.content || `I'm sorry, this workflow is not feasible. Reason: ${response.reason || "I couldn't find suitable APIs."}`)
                 setIsGenerating(false)
-                setCurrentStageIndex(-1)
                 return
             }
 
-            addMessage('ai', '✅ Great news! This workflow is feasible. Generating definition...')
-            setCurrentStageIndex(3)
+            // Stage 4: Generating Solution
+            await simulateStage(4, 1500)
 
-            // Stage 4: Generating Workflow Definition
-            await new Promise(resolve => setTimeout(resolve, 300))
-            addMessage('system', '⚙️ Generating workflow definition (JSON/Python)...')
-            await simulateStage(4, 2500)
-            addMessage('ai', '✅ Workflow definition generated successfully!')
-            setCurrentStageIndex(4)
+            // Stage 5: Persisting (Optional)
+            if (response.workflow_id) {
+                await simulateStage(5, 1200)
+            } else {
+                updateStage(5, 'completed', 100)
+            }
 
-            // Stage 5: Preparing Execution
-            await new Promise(resolve => setTimeout(resolve, 300))
-            addMessage('system', '🚀 Preparing workflow for execution...')
-            await simulateStage(5, 1500)
-            addMessage('ai', '✅ Workflow is ready! Here\'s a preview of what will be executed:\n\n📋 **Workflow Summary:**\n• Steps: 5\n• Estimated time: 2-3 minutes\n• APIs used: getUserProfile, createWorkflow, executeWorkflow\n\nWould you like to proceed with execution?')
+            // Stage 6: Finalizing
+            await simulateStage(6, 600)
 
+            addMessage('ai', response.content)
             setIsGenerating(false)
-            setCurrentStageIndex(-1)
 
-        } catch (error) {
-            addMessage('ai', '❌ An error occurred during workflow generation. Please try again.')
+        } catch (error: any) {
+            console.error('Agent Error:', error)
+            const errorMsg = error.response?.data?.content || error.message || 'Unknown technical error'
+            addMessage('ai', `❌ Alamak bro, ada masalah teknikal: ${errorMsg}. Cuba refresh atau rephrase prompt kau.`)
             setIsGenerating(false)
-            setCurrentStageIndex(-1)
+            // Mark current stages as failed
+            setStages(prev => prev.map((s) =>
+                s.status === 'in-progress' ? { ...s, status: 'failed', progress: 0 } : s
+            ))
         }
     }
 
@@ -169,12 +181,12 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
         ])
         setStages([
             { id: 1, name: 'Receiving Prompt', status: 'pending', progress: 0, color: 'blue' },
-            { id: 2, name: 'Checking Vector Database', status: 'pending', progress: 0, color: 'purple' },
+            { id: 2, name: 'AI Thinking & Vector Search', status: 'pending', progress: 0, color: 'purple' },
             { id: 3, name: 'Evaluating Feasibility', status: 'pending', progress: 0, color: 'gold' },
-            { id: 4, name: 'Generating Workflow Definition', status: 'pending', progress: 0, color: 'green' },
-            { id: 5, name: 'Preparing Execution', status: 'pending', progress: 0, color: 'blue' },
+            { id: 4, name: 'Generating Response', status: 'pending', progress: 0, color: 'green' },
+            { id: 5, name: 'Persisting Workflow Workspace', status: 'pending', progress: 0, color: 'purple' },
+            { id: 6, name: 'Finalizing Output', status: 'pending', progress: 0, color: 'blue' },
         ])
-        setCurrentStageIndex(-1)
         setIsGenerating(false)
     }
 
@@ -236,10 +248,10 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
                                 >
                                     <div
                                         className={`max-w-[75%] rounded-2xl px-5 py-3 ${message.type === 'user'
-                                                ? 'bg-gold-500/20 border-2 border-gold-500/30 text-[var(--text-primary)]'
-                                                : message.type === 'system'
-                                                    ? 'bg-purple-500/10 border-2 border-purple-500/20 text-purple-300'
-                                                    : 'bg-blue-500/10 border-2 border-blue-500/20 text-[var(--text-primary)]'
+                                            ? 'bg-gold-500/20 border-2 border-gold-500/30 text-[var(--text-primary)]'
+                                            : message.type === 'system'
+                                                ? 'bg-purple-500/10 border-2 border-purple-500/20 text-purple-300'
+                                                : 'bg-blue-500/10 border-2 border-blue-500/20 text-[var(--text-primary)]'
                                             }`}
                                     >
                                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -288,28 +300,28 @@ const WorkflowChatModal: React.FC<WorkflowChatModalProps> = ({ isOpen, onClose }
                         <h3 className="text-lg font-bold text-[var(--text-primary)] mb-6">Generation Status</h3>
 
                         <div className="space-y-4">
-                            {stages.map((stage, index) => (
+                            {stages.map((stage) => (
                                 <div
                                     key={stage.id}
                                     className={`p-4 rounded-xl border-2 transition-all ${stage.status === 'in-progress'
-                                            ? 'border-gold-500/50 bg-gold-500/5'
-                                            : stage.status === 'completed'
-                                                ? 'border-green-500/30 bg-green-500/5'
-                                                : stage.status === 'failed'
-                                                    ? 'border-red-500/30 bg-red-500/5'
-                                                    : 'border-[var(--border-secondary)] bg-[var(--bg-secondary)]/50'
+                                        ? 'border-gold-500/50 bg-gold-500/5'
+                                        : stage.status === 'completed'
+                                            ? 'border-green-500/30 bg-green-500/5'
+                                            : stage.status === 'failed'
+                                                ? 'border-red-500/30 bg-red-500/5'
+                                                : 'border-[var(--border-secondary)] bg-[var(--bg-secondary)]/50'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
                                             <div
                                                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${stage.status === 'completed'
-                                                        ? 'bg-green-500/20 text-green-400'
-                                                        : stage.status === 'in-progress'
-                                                            ? 'bg-gold-500/20 text-gold-400'
-                                                            : stage.status === 'failed'
-                                                                ? 'bg-red-500/20 text-red-400'
-                                                                : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]'
+                                                    ? 'bg-green-500/20 text-green-400'
+                                                    : stage.status === 'in-progress'
+                                                        ? 'bg-gold-500/20 text-gold-400'
+                                                        : stage.status === 'failed'
+                                                            ? 'bg-red-500/20 text-red-400'
+                                                            : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]'
                                                     }`}
                                             >
                                                 {stage.status === 'completed' ? (
