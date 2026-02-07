@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { WorkflowEditor } from '../components/workflow-editor/WorkflowEditor'
+import { mockStepsToN8n, n8nToReactFlow } from '../utils/n8nTransform'
 
 // Mock workflow data (same as Dashboard)
 const mockWorkflows = [
@@ -64,6 +66,12 @@ const Workflow: React.FC = () => {
   const navigate = useNavigate()
 
   const workflow = mockWorkflows.find(w => w.id === id)
+
+  const flowData = useMemo(() => {
+    if (!workflow) return { nodes: [], edges: [] }
+    const n8n = mockStepsToN8n(workflow.steps)
+    return n8nToReactFlow(n8n)
+  }, [workflow])
 
   if (!workflow) {
     return (
@@ -133,28 +141,9 @@ const Workflow: React.FC = () => {
         </div>
       </div>
 
-      {/* Workflow Steps */}
-      <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-8 border-2 border-[var(--border-primary)] mb-6">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">Workflow Steps</h2>
-
-        <div className="space-y-4">
-          {workflow.steps.map((step, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-6 p-6 bg-[var(--bg-secondary)] rounded-2xl border-2 border-[var(--border-secondary)] hover:border-gold-500/30 transition-all duration-200"
-            >
-              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center shadow-lg shadow-gold-500/30">
-                <span className="text-lg font-extrabold text-black">{index + 1}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-bold text-[var(--text-primary)]">{step}</h3>
-              </div>
-              <svg className="w-5 h-5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          ))}
-        </div>
+      {/* Workflow Editor Canvas */}
+      <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl border-2 border-[var(--border-primary)] mb-6 overflow-hidden" style={{ height: '600px' }}>
+        <WorkflowEditor initialNodes={flowData.nodes} initialEdges={flowData.edges} />
       </div>
 
       {/* Action Buttons */}
