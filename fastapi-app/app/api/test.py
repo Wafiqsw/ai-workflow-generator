@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.services import check_mysql_health, check_chroma_health
+from app.services import check_mysql_health, check_chroma_health, test_embedding
 from datetime import datetime
 
 router = APIRouter(prefix="/test", tags=["Test"])
@@ -51,6 +51,24 @@ def chromadb_health():
     """
     return check_chroma_health()
 
+@router.get("/vector/test")
+def vector_test():
+    """
+    Test vector embedding functionality
+    """
+    texts = ["Hello world!", "FastAPI with embeddings."]
+    embeddings = test_embedding(texts)
+    
+    return {
+        "status": "success",
+        "model": "all-MiniLM-L6-v2",
+        "dimension": len(embeddings[0]) if embeddings else 0,
+        "sample_count": len(texts),
+        "results": [
+            {"text": text, "embedding_preview": emb[:5]}
+            for text, emb in zip(texts, embeddings)
+        ]
+    }
 
 # ============= Generic Test Endpoint =============
 

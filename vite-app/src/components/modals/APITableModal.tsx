@@ -1,91 +1,34 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Button } from '../Button'
-
-interface APIData {
-    id: number
-    name: string
-    url: string
-    param: string
-    returnValue: string
-    description: string
-}
+import { mysqlApi, type APIRecord } from '../../api'
 
 interface APITableModalProps {
     isOpen: boolean
     onClose: () => void
-    apis?: APIData[]
 }
 
-// Mock data for testing
-const mockAPIs: APIData[] = [
-    {
-        id: 1,
-        name: 'getUserProfile',
-        url: '/api/v1/users/{id}',
-        param: 'id: string',
-        returnValue: 'User',
-        description: 'Retrieves user profile information by user ID'
-    },
-    {
-        id: 2,
-        name: 'createWorkflow',
-        url: '/api/v1/workflows',
-        param: 'name: string, steps: Step[]',
-        returnValue: 'Workflow',
-        description: 'Creates a new workflow with specified steps'
-    },
-    {
-        id: 3,
-        name: 'listWorkflows',
-        url: '/api/v1/workflows',
-        param: 'page: number, limit: number',
-        returnValue: 'Workflow[]',
-        description: 'Returns paginated list of all workflows'
-    },
-    {
-        id: 4,
-        name: 'deleteWorkflow',
-        url: '/api/v1/workflows/{id}',
-        param: 'id: string',
-        returnValue: 'void',
-        description: 'Deletes a workflow by ID'
-    },
-    {
-        id: 5,
-        name: 'executeWorkflow',
-        url: '/api/v1/workflows/{id}/execute',
-        param: 'id: string, input: any',
-        returnValue: 'ExecutionResult',
-        description: 'Executes a workflow with provided input data'
-    },
-    {
-        id: 6,
-        name: 'updateWorkflow',
-        url: '/api/v1/workflows/{id}',
-        param: 'id: string, updates: Partial<Workflow>',
-        returnValue: 'Workflow',
-        description: 'Updates an existing workflow with new data'
-    },
-    {
-        id: 7,
-        name: 'getWorkflowStatus',
-        url: '/api/v1/workflows/{id}/status',
-        param: 'id: string',
-        returnValue: 'WorkflowStatus',
-        description: 'Gets the current execution status of a workflow'
-    },
-    {
-        id: 8,
-        name: 'searchAPIs',
-        url: '/api/v1/search',
-        param: 'query: string, filters: Filter[]',
-        returnValue: 'APIData[]',
-        description: 'Searches for APIs matching the query and filters'
-    },
-]
-
-const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = mockAPIs }) => {
+const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose }) => {
+    const [apis, setApis] = useState<APIRecord[]>([])
+    const [isLoading, setIsLoading] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+
+    const fetchApis = async () => {
+        setIsLoading(true)
+        try {
+            const data = await mysqlApi.getAllApis()
+            setApis(data)
+        } catch (error) {
+            console.error('Failed to fetch APIs:', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchApis()
+        }
+    }, [isOpen])
 
     // Filter APIs based on search query
     const filteredAPIs = useMemo(() => {
@@ -93,13 +36,83 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
 
         const query = searchQuery.toLowerCase()
         return apis.filter(api =>
-            api.name.toLowerCase().includes(query) ||
-            api.url.toLowerCase().includes(query) ||
-            api.param.toLowerCase().includes(query) ||
-            api.returnValue.toLowerCase().includes(query) ||
-            api.description.toLowerCase().includes(query)
+            api.api_name.toLowerCase().includes(query) ||
+            api.system_name.toLowerCase().includes(query) ||
+            api.description.toLowerCase().includes(query) ||
+            JSON.stringify(api.params_values || {}).toLowerCase().includes(query) ||
+            JSON.stringify(api.return_values || {}).toLowerCase().includes(query)
         )
     }, [apis, searchQuery])
+
+    // Structured JSON renderer for better scannability
+    const JSONTagView = ({ data, colorClass = 'purple' }: { data: any, colorClass?: 'purple' | 'green' | 'blue' }) => {
+        if (!data) return <span className="text-gray-500 italic text-xs">None</span>
+
+        // Colors mapping
+        const colors = {
+            purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+            green: 'text-green-400 bg-green-500/10 border-green-500/20',
+            blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+        }
+        const activeColor = colors[colorClass]
+
+        // Case 1: Array of Objects (e.g., standard API parameters)
+        if (Array.isArray(data)) {
+            return (
+                <div className="flex flex-col gap-2.5 py-1">
+                    {data.map((item, i) => {
+                        const entries = Object.entries(item).filter(([k, v]) => k !== 'required' || v === true);
+                        return (
+                            <div key={i} className={`flex flex-wrap gap-2 p-2.5 rounded-xl border ${activeColor}`}>
+                                {entries.map(([k, v], idx) => (
+                                    <div key={k} className="flex items-center gap-1.5 text-xs">
+                                        {k === 'required' ? (
+                                            <span className="bg-red-500/20 text-red-500 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-red-500/20 tracking-tighter">REQUIRED</span>
+                                        ) : (
+                                            <>
+                                                <span className="opacity-60 font-bold uppercase text-[9px] tracking-wider">{k}</span>
+                                                <span className="font-semibold">{String(v)}</span>
+                                            </>
+                                        )}
+                                        {idx < entries.length - 1 && (
+                                            <span className="opacity-20 mx-1 text-lg leading-none font-thin text-[var(--text-tertiary)]">|</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            )
+        }
+
+        // Case 2: Standard Object
+        if (typeof data === 'object') {
+            const entries = Object.entries(data).filter(([k, v]) => k !== 'required' || v === true);
+            return (
+                <div className={`flex flex-wrap gap-2.5 p-2.5 rounded-xl border ${activeColor}`}>
+                    {entries.map(([k, v], idx) => (
+                        <div key={k} className="flex items-center gap-1.5 text-xs">
+                            {k === 'required' ? (
+                                <span className="bg-red-500/20 text-red-500 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-red-500/20 tracking-tighter">REQUIRED</span>
+                            ) : (
+                                <>
+                                    <span className="opacity-60 font-bold uppercase text-[9px] tracking-wider">{k}</span>
+                                    <span className="font-semibold">{String(v)}</span>
+                                </>
+                            )}
+                            {idx < entries.length - 1 && (
+                                <span className="opacity-20 mx-1 text-lg leading-none font-thin text-[var(--text-tertiary)]">|</span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+
+        // Case 3: Simple values
+        return <span className={`px-2 py-0.5 rounded text-xs font-mono border ${activeColor}`}>{String(data)}</span>
+    }
 
     if (!isOpen) return null
 
@@ -112,24 +125,38 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-7xl overflow-hidden rounded-3xl bg-[var(--bg-secondary)] border-2 border-[var(--border-secondary)] shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="relative w-full max-w-[95vw] 2xl:max-w-[1600px] overflow-hidden rounded-3xl bg-[var(--bg-secondary)] border-2 border-[var(--border-secondary)] shadow-2xl animate-in fade-in zoom-in duration-300">
                 <div className="p-10">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <h2 className="text-3xl font-bold text-[var(--text-primary)]">API Database</h2>
                             <p className="text-sm text-[var(--text-tertiary)] mt-2">
-                                {filteredAPIs.length} API{filteredAPIs.length !== 1 ? 's' : ''} {searchQuery ? 'found' : 'available'}
+                                {isLoading ? 'Refreshing data...' :
+                                    `${filteredAPIs.length} API${filteredAPIs.length !== 1 ? 's' : ''} ${searchQuery ? 'found' : 'available'}`
+                                }
                             </p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2.5 hover:bg-gold-500/10 rounded-xl transition-colors"
-                        >
-                            <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={fetchApis}
+                                disabled={isLoading}
+                                className="p-2.5 hover:bg-gold-500/10 rounded-xl transition-colors disabled:opacity-50"
+                                title="Refresh data"
+                            >
+                                <svg className={`w-5 h-5 text-gold-500 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-2.5 hover:bg-gold-500/10 rounded-xl transition-colors"
+                            >
+                                <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Search Bar */}
@@ -140,7 +167,7 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
                             </svg>
                             <input
                                 type="text"
-                                placeholder="Search APIs by name, URL, parameters, or description..."
+                                placeholder="Search APIs by name, system, parameters, or description..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3.5 bg-[var(--bg-tertiary)] border-2 border-[var(--border-secondary)] rounded-xl text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-gold-500 focus:outline-none transition-colors"
@@ -160,23 +187,23 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
 
                     {/* Table Container with Scroll */}
                     <div className="overflow-hidden rounded-2xl border-2 border-[var(--border-secondary)] bg-[var(--bg-tertiary)]/30">
-                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
                             <table className="w-full">
                                 <thead className="sticky top-0 z-10">
                                     <tr className="border-b-2 border-[var(--border-secondary)] bg-[var(--bg-tertiary)]">
-                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">
+                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap w-[15%]">
+                                            System Name
+                                        </th>
+                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap w-[15%]">
                                             API Name
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">
-                                            API URL
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">
+                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap min-w-[300px] w-[30%]">
                                             Parameters
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">
+                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap min-w-[250px] w-[20%]">
                                             Return Value
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap">
+                                        <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)] whitespace-nowrap w-[20%]">
                                             Description
                                         </th>
                                     </tr>
@@ -187,30 +214,26 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
                                             <tr
                                                 key={api.id}
                                                 className={`
-                          border-b border-[var(--border-secondary)] 
-                          hover:bg-gold-500/5 transition-colors
-                          ${index % 2 === 0 ? 'bg-[var(--bg-secondary)]' : 'bg-[var(--bg-tertiary)]/20'}
-                        `}
+                                                    border-b border-[var(--border-secondary)] 
+                                                    hover:bg-gold-500/5 transition-colors
+                                                    ${index % 2 === 0 ? 'bg-[var(--bg-secondary)]' : 'bg-[var(--bg-tertiary)]/20'}
+                                                `}
                                             >
                                                 <td className="px-6 py-4">
-                                                    <span className="font-semibold text-gold-400 text-sm">
-                                                        {api.name}
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-500/10 px-2 py-1 rounded">
+                                                        {api.system_name}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <code className="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded font-mono">
-                                                        {api.url}
-                                                    </code>
+                                                    <span className="font-semibold text-gold-400 text-sm">
+                                                        {api.api_name}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <code className="text-xs text-purple-400 font-mono">
-                                                        {api.param}
-                                                    </code>
+                                                    <JSONTagView data={api.params_values} colorClass="purple" />
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <code className="text-xs text-green-400 font-mono">
-                                                        {api.returnValue}
-                                                    </code>
+                                                    <JSONTagView data={api.return_values} colorClass="green" />
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm text-[var(--text-secondary)]">
@@ -226,7 +249,9 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
                                                     <svg className="w-12 h-12 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
-                                                    <p className="text-[var(--text-tertiary)] font-medium">No APIs found matching "{searchQuery}"</p>
+                                                    <p className="text-[var(--text-tertiary)] font-medium">
+                                                        {isLoading ? 'Fetching data...' : `No APIs found matching "${searchQuery}"`}
+                                                    </p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -249,4 +274,3 @@ const APITableModal: React.FC<APITableModalProps> = ({ isOpen, onClose, apis = m
 }
 
 export { APITableModal }
-export type { APIData }

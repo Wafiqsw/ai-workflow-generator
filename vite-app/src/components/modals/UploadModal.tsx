@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Button } from '../Button'
 import { Loadingbar } from '../Loadingbar'
+import { csvApi } from '../../api'
 
 interface UploadModalProps {
     isOpen: boolean
@@ -87,21 +88,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
         ))
     }
 
-    const simulateStage = (stageId: number, duration: number): Promise<void> => {
-        return new Promise((resolve) => {
-            updateStageProgress(stageId, 0, 'in-progress')
-            let progress = 0
-            const interval = setInterval(() => {
-                progress += 10
-                updateStageProgress(stageId, progress, 'in-progress')
-                if (progress >= 100) {
-                    clearInterval(interval)
-                    updateStageProgress(stageId, 100, 'completed')
-                    resolve()
-                }
-            }, duration / 10)
-        })
-    }
 
     const handleUpload = async () => {
         if (!file) return
@@ -111,41 +97,70 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
         setUploadSummary(null)
 
         try {
-            // Stage 1: Transform and Normalize Data
-            await simulateStage(1, 1500)
+            // Initial call to start the job
+            updateStageProgress(1, 10, 'in-progress')
+            const { job_id } = await csvApi.processAsync(file);
 
-            // Stage 2: Generate Vector Embedding
-            await simulateStage(2, 2000)
+            // Polling loop to check progress 
+            let isDone = false;
 
-            // Stage 3: Check Exist or Not
-            await simulateStage(3, 1000)
+            while (!isDone) {
+                await new Promise(r => setTimeout(r, 1000));
+                const job = await csvApi.getJobStatus(job_id);
 
-            // Simulate duplicate detection
-            const totalAPIs = Math.floor(Math.random() * 20) + 5
-            const existingAPIs = Math.floor(Math.random() * totalAPIs)
-            const newAPIs = totalAPIs - existingAPIs
+                if (job.status === 'completed') {
+                    isDone = true;
+                    // Ensure all stages are marked completed at the end
+                    [1, 2, 3, 4, 5].forEach(id => updateStageProgress(id, 100, 'completed'));
 
-            setUploadSummary({ newAPIs, existingAPIs, totalAPIs })
+                    const result = job.result;
+                    setUploadSummary({
+                        newAPIs: result.mysql_saved,
+                        existingAPIs: result.total_rows - result.mysql_saved,
+                        totalAPIs: result.total_rows
+                    });
 
-            // If all exist, stop here
-            if (newAPIs === 0) {
-                setError("All APIs already exist in the database.")
-                setIsUploading(false)
-                return
+                    console.log("✅ Final Processing Result:", result);
+                    setUploadCompleted(true);
+                    setIsUploading(false);
+                } else if (job.status === 'error') {
+                    throw new Error(job.error || "Async processing failed");
+                } else if (job.status === 'processing') {
+                    const flowProgress = job.progress || 0;
+
+                    // PROFESSIONAL SEQUENTIAL MAPPING:
+                    // Stage 1 (Transform): 0 - 30%
+                    if (flowProgress <= 30) {
+                        updateStageProgress(1, (flowProgress / 30) * 100, 'in-progress');
+                    }
+                    // Stage 2 (Embedding): 30 - 70%
+                    else if (flowProgress <= 70) {
+                        updateStageProgress(1, 100, 'completed');
+                        updateStageProgress(2, ((flowProgress - 30) / 40) * 100, 'in-progress');
+                    }
+                    // Stage 3 (Existence Scan): 70 - 80%
+                    else if (flowProgress <= 80) {
+                        updateStageProgress(2, 100, 'completed');
+                        updateStageProgress(3, ((flowProgress - 70) / 10) * 100, 'in-progress');
+                    }
+                    // Stage 4 (MySQL): 80 - 90%
+                    else if (flowProgress <= 90) {
+                        updateStageProgress(3, 100, 'completed');
+                        updateStageProgress(4, ((flowProgress - 80) / 10) * 100, 'in-progress');
+                    }
+                    // Stage 5 (ChromaDB): 90 - 100%
+                    else {
+                        updateStageProgress(4, 100, 'completed');
+                        updateStageProgress(5, ((flowProgress - 90) / 10) * 100, 'in-progress');
+                    }
+                }
             }
 
-            // Stage 4: Upload API to Database
-            await simulateStage(4, 1500)
-
-            // Stage 5: Upload API to Vector Database
-            await simulateStage(5, 1500)
-
-            // Success - keep modal open for user to review
-            setIsUploading(false)
-            setUploadCompleted(true)
-
-        } catch (err) {
-            setError("Upload failed. Please try again.")
+        } catch (err: any) {
+            console.error("Upload Error:", err)
+            const errorMessage = err.response?.data?.detail || err.message || "Upload failed. Please try again."
+            setError(errorMessage)
+            setStages(prev => prev.map(s => s.status === 'in-progress' ? { ...s, status: 'error' } : s))
             setIsUploading(false)
         }
     }

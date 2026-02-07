@@ -15,7 +15,7 @@ services:
     ports:
       - "3308:3306"
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./scripts:/docker-entrypoint-initdb.d # init/seed scripts
     networks:
       - fullstack-network
@@ -34,7 +34,8 @@ services:
     container_name: fastapi-app
     restart: unless-stopped
     volumes:
-      - ./fastapi-app:/app # hot reload
+      - ./fastapi-app:/app
+      - uploads_data:/app/uploads # Persistent storage for CSV uploads # hot reload
       - /app/venv # prevent overwriting venv
       - /app/__pycache__ # prevent overwriting cache
     ports:
@@ -85,7 +86,7 @@ services:
 
   # ----------------- ChromaDB Vector Database -----------------
   chromadb:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.5.20
     container_name: chromadb
     restart: unless-stopped
     ports:
@@ -103,5 +104,6 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
+  mysql_data:
   chroma_data:
+  uploads_data: # For CSV uploads and other files
