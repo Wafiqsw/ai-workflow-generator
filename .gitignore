@@ -42,3 +42,6 @@ Thumbs.db
 *.sql.gz
 *.db
 *.sqlite
+# Workflows
+fastapi-app/workflows/*
+!fastapi-app/workflows/.gitkeep
