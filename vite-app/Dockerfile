@@ -1,20 +1,19 @@
-# Use Node image
-FROM node:20
+# Use slim Node image
+FROM node:20-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files and install dependencies (including curl for health checks)
-COPY package*.json ./
+# Install curl for health checks
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-    npm install && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install
 
 # Copy all source code
 COPY . .
 
-# Expose Vite dev server port
 EXPOSE 5173
 
-# Start dev server
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
