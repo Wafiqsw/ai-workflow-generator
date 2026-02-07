@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.agents.open_router import chat_with_openrouter, run_agent_query
+from app.agents.open_router import chat_with_gemini, run_agent_query
 from app.services.vector_service import reindex_all_apis
 from typing import Optional, List, Dict, Any
 
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/agents", tags=["Agents"])
 
 class ChatRequest(BaseModel):
     prompt: str
-    model: Optional[str] = "openrouter/free"
+    model: Optional[str] = "gemini-3-flash-preview"
     reasoning: Optional[bool] = True
 
 class AgentQueryRequest(BaseModel):
@@ -35,30 +35,25 @@ async def query_agent(request: AgentQueryRequest):
     """
     try:
         content = run_agent_query(request.prompt)
-        
-        # Parse [FEASIBILITY_REPORT: is_feasible=True/False, score=0.X, reason='...']
+
         is_feasible = True
         score = 1.0
         reason = None
         workflow_id = None
-        
+
         report_match = re.search(r"\[FEASIBILITY_REPORT:\s*is_feasible=(True|False),\s*score=([0-9.]+),\s*reason='(.*?)'\]", content)
-        
+
         if report_match:
             is_feasible = report_match.group(1) == "True"
             score = float(report_match.group(2))
             reason = report_match.group(3)
-            # Remove the report from the user-facing content
             content = content.replace(report_match.group(0), "").strip()
 
-        # Parse Folder ID: `wf_...`
         id_match = re.search(r"`(wf_[a-z0-9]+)`", content)
         if not id_match:
-            # Also check without backticks
             id_match = re.search(r"wf_[a-z0-9]{8}", content)
-            
+
         if id_match:
-            # If it matches the pattern wf_ plus 8 lower-alpha/nums
             workflow_id = id_match.group(1) if "`" in id_match.group(0) else id_match.group(0)
 
         return AgentQueryResponse(
@@ -70,12 +65,11 @@ async def query_agent(request: AgentQueryRequest):
         )
     except Exception as e:
         error_detail = str(e)
-        # Try to extract the inner error message if it's an OpenAI/OpenRouter status error
         if "Provider returned error" in error_detail:
             match = re.search(r'"message":"(.*?)"', error_detail)
             if match:
                 error_detail = match.group(1)
-        
+
         return AgentQueryResponse(
             content=f"❌ Backend Error: {error_detail}",
             is_feasible=False,
@@ -94,39 +88,29 @@ async def reindex_apis():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/test-openrouter", response_model=ChatResponse)
-async def test_openrouter_post(request: ChatRequest):
+@router.post("/test-chat", response_model=ChatResponse)
+async def test_chat_post(request: ChatRequest):
     """
-    Test the OpenRouter model with a simple prompt and reasoning (POST).
+    Test the Gemini model with a simple prompt (POST).
     """
     try:
         messages = [{"role": "user", "content": request.prompt}]
-        result = chat_with_openrouter(
-            messages=messages,
-            model=request.model,
-            reasoning=request.reasoning
-        )
+        result = chat_with_gemini(messages=messages)
         return ChatResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/test-openrouter", response_model=ChatResponse)
-async def test_openrouter_get(
-    prompt: str = "Hye, how are you today?", 
-    model: str = "openrouter/free", 
-    reasoning: bool = True
+@router.get("/test-chat", response_model=ChatResponse)
+async def test_chat_get(
+    prompt: str = "Hey, how are you today?",
 ):
     """
-    Test the OpenRouter model via GET (Query Parameters).
-    Example: /agents/test-openrouter?prompt=Hello&reasoning=true
+    Test the Gemini model via GET.
+    Example: /agents/test-chat?prompt=Hello
     """
     try:
         messages = [{"role": "user", "content": prompt}]
-        result = chat_with_openrouter(
-            messages=messages,
-            model=model,
-            reasoning=reasoning
-        )
+        result = chat_with_gemini(messages=messages)
         return ChatResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
