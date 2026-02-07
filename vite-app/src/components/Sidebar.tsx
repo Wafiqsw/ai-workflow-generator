@@ -10,12 +10,9 @@ interface Workflow {
     isActive?: boolean
 }
 
-interface SidebarProps {
-    isOpen: boolean
-    onClose?: () => void
-}
+interface SidebarProps { }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const [isWorkflowChatModalOpen, setIsWorkflowChatModalOpen] = useState(false)
@@ -44,64 +41,43 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
     return (
         <>
-            {/* Overlay for mobile */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-55"
-                    onClick={onClose}
-                />
-            )}
-
             {/* Sidebar */}
             <aside
                 className={`
-          fixed top-0 left-0 h-screen z-60
-          w-80 bg-[var(--bg-secondary)] backdrop-blur-lg border-r-2 border-[var(--border-secondary)]
-          transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          flex flex-col shadow-2xl
+          h-screen w-80 bg-[var(--bg-secondary)] backdrop-blur-lg border-r-2 border-[var(--border-secondary)]
+          flex flex-col shadow-2xl shrink-0
         `}
             >
-                {/* Sidebar Header */}
-                <div className="p-5 border-b-2 border-[var(--border-secondary)]">
-                    <div className="flex items-center justify-between mb-5">
-                        <button
-                            onClick={() => {
-                                navigate('/')
-                                onClose?.()
-                            }}
-                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                        >
-                            <div className="w-10 h-10 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center shadow-xl shadow-gold-500/30">
-                                <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                            </div>
-                            <h2 className="text-lg font-bold text-[var(--text-primary)]">Workflows</h2>
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="p-2.5 hover:bg-gold-500/10 rounded-xl transition-all duration-200"
-                            aria-label="Close sidebar"
-                        >
-                            <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                {/* Sidebar Header - Centered */}
+                <div className="p-6 border-b-2 border-[var(--border-secondary)]">
+                    <button
+                        onClick={() => {
+                            navigate('/')
+                        }}
+                        className="flex flex-col items-center gap-4 hover:opacity-80 transition-opacity w-full"
+                    >
+                        <div className="w-12 h-12 bg-gradient-to-br from-gold-500 to-gold-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-gold-500/30">
+                            <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
-                        </button>
-                    </div>
+                        </div>
+                        <h2 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Workflow Studio</h2>
+                    </button>
 
                     {/* New Workflow Button */}
-                    <Button
-                        variant="primary"
-                        size="md"
-                        className="w-full"
-                        onClick={() => setIsWorkflowChatModalOpen(true)}
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                        </svg>
-                        New Workflow
-                    </Button>
+                    <div className="mt-8">
+                        <Button
+                            variant="primary"
+                            size="md"
+                            className="w-full"
+                            onClick={() => setIsWorkflowChatModalOpen(true)}
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                            </svg>
+                            New Workflow
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Search */}
@@ -115,13 +91,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                             placeholder="Search workflows..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500/50 transition-all"
+                            className="w-full pl-10 pr-4 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500/50 transition-all text-sm"
                         />
                     </div>
                 </div>
 
                 {/* Workflow List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
                     {Object.entries(groupedWorkflows).map(([timestamp, items]) => (
                         <div key={timestamp}>
                             <h3 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 px-2">
@@ -133,7 +109,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                         key={workflow.id}
                                         onClick={() => {
                                             navigate(`/workflow/${workflow.id}`)
-                                            onClose?.()
                                         }}
                                         className={`
                       w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 group
@@ -179,6 +154,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 onClose={() => setIsWorkflowChatModalOpen(false)}
             />
 
+            <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
         </>
     )
 }
