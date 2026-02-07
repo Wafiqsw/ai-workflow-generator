@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -6,6 +7,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.agents.open_router import chat_with_gemini, run_agent_query
 from app.services.vector_service import reindex_all_apis
+from app.services.job_service import JobService
+from app.services.dag_runner import run_dag
 from typing import Optional, List, Dict, Any
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
@@ -157,3 +160,60 @@ async def test_chat_get(
         return ChatResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Workflow execution endpoints ─────────────────────────────────
+
+@router.post("/workflows/{workflow_id}/run")
+async def run_workflow(workflow_id: str):
+    """Trigger execution of a workflow's airflow_dag.py."""
+    dag_path = WORKFLOWS_DIR / workflow_id / "airflow_dag.py"
+    if not dag_path.exists():
+        raise HTTPException(status_code=404, detail=f"No airflow_dag.py found for {workflow_id}")
+
+    job_id = JobService.create_job("workflow_run")
+    JobService.update_job(job_id, status="running", progress=0)
+
+    async def _execute():
+        def on_update(task_id, status, idx, total):
+            progress = int(((idx + 1) / total) * 100) if status != "running" else int((idx / total) * 100)
+            JobService.update_job(job_id, progress=progress)
+
+        result = await asyncio.to_thread(run_dag, str(dag_path), on_update)
+
+        if result["status"] == "completed":
+            JobService.update_job(job_id, status="completed", progress=100, result=result)
+            # Update workflow status to active on success
+            wf_file = WORKFLOWS_DIR / workflow_id / "workflow.json"
+            if wf_file.exists():
+                try:
+                    data = json.loads(wf_file.read_text())
+                    data["status"] = "active"
+                    wf_file.write_text(json.dumps(data, indent=2))
+                except (json.JSONDecodeError, OSError):
+                    pass
+        else:
+            JobService.update_job(
+                job_id,
+                status="failed",
+                progress=100,
+                result=result,
+                error=result.get("error") or "One or more tasks failed",
+            )
+
+    asyncio.create_task(_execute())
+    return {"job_id": job_id}
+
+
+@router.get("/workflows/{workflow_id}/runs/{job_id}")
+async def get_run_status(workflow_id: str, job_id: str):
+    """Poll execution status for a workflow run."""
+    job = JobService.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    return {
+        "status": job["status"],
+        "progress": job["progress"],
+        "tasks": job["result"]["tasks"] if job.get("result") and "tasks" in job["result"] else [],
+        "error": job.get("error"),
+    }
