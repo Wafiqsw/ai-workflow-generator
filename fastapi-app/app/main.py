@@ -3,6 +3,7 @@ from app.api.test import router as test_router
 from app.api.csv import router as csv_router
 from app.api.mysql import router as mysql_router
 from app.api.chroma import router as chroma_router
+from app.api.agents import router as agents_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.vector_service import _get_model
 
@@ -37,3 +38,4 @@ app.include_router(test_router)
 app.include_router(csv_router)
 app.include_router(mysql_router)
 app.include_router(chroma_router)
+app.include_router(agents_router)

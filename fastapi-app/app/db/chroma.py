@@ -13,7 +13,7 @@ load_dotenv()
 
 # Get ChromaDB host and port from environment
 CHROMA_HOST = os.getenv("CHROMA_HOST", "chromadb")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8002"))
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
 
 # Global ChromaDB client
 _chroma_client = None
