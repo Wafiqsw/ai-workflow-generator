@@ -1,4 +1,42 @@
--- 002_seed.sql
+-- 002_seeder.sql
 
--- Insert sample API entries
+USE myapp;
 
+-- Insert mock API entries from mockApi.csv
+
+INSERT INTO api_list (id, system_name, api_name, params_values, return_values, description, created_at) VALUES
+('1', 'UserSystem', 'CreateUser', 
+ '[{"name":"username","type":"string","required":true},{"name":"email","type":"string","required":true}]',
+ '{"status":"success","user_id":"uuid"}',
+ 'API to create a new user',
+ '2026-02-07 10:00:00'),
+
+('2', 'UserSystem', 'GetUser',
+ '[{"name":"user_id","type":"string","required":true}]',
+ '{"status":"success","user":{"id":"uuid","username":"string","email":"string"}}',
+ 'API to get user details by ID',
+ '2026-02-07 10:05:00'),
+
+('3', 'PaymentSystem', 'ProcessPayment',
+ '[{"name":"amount","type":"number","required":true},{"name":"currency","type":"string","required":true}]',
+ '{"status":"success","transaction_id":"uuid"}',
+ 'API to process a payment',
+ '2026-02-07 10:10:00'),
+
+('4', 'PaymentSystem', 'RefundPayment',
+ '[{"name":"transaction_id","type":"string","required":true}]',
+ '{"status":"success","refund_id":"uuid"}',
+ 'API to refund a payment',
+ '2026-02-07 10:15:00'),
+
+('5', 'NotificationSystem', 'SendEmail',
+ '[{"name":"email","type":"string","required":true},{"name":"subject","type":"string","required":true},{"name":"body","type":"string","required":true}]',
+ '{"status":"sent"}',
+ 'API to send an email notification',
+ '2026-02-07 10:20:00'),
+
+('6', 'NotificationSystem', 'SendSMS',
+ '[{"name":"phone_number","type":"string","required":true},{"name":"message","type":"string","required":true}]',
+ '{"status":"sent"}',
+ 'API to send an SMS notification',
+ '2026-02-07 10:25:00');
