@@ -83,9 +83,31 @@ services:
       retries: 3
       start_period: 40s
 
+  # ----------------- ChromaDB Vector Database -----------------
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - fullstack-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
 networks:
   fullstack-network:
     driver: bridge
 
 volumes:
   db_data:
+  chroma_data:
