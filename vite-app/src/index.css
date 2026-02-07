@@ -105,3 +105,34 @@ h6 {
   outline: 2px solid var(--border-primary);
   outline-offset: 2px;
 }
+
+/* ReactFlow overrides */
+.workflow-editor-canvas .react-flow__node.selected {
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+  border-radius: 0.75rem;
+}
+
+.workflow-editor-controls .react-flow__controls-button {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-secondary);
+  fill: var(--text-secondary);
+}
+
+.workflow-editor-controls .react-flow__controls-button:hover {
+  background-color: var(--bg-tertiary);
+  color: #fbbf24;
+  fill: #fbbf24;
+}
+
+.workflow-editor-minimap {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-secondary) !important;
+  border-radius: 0.75rem !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #fbbf24 !important;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+}
