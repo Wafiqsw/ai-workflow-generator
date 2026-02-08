@@ -1,24 +1,39 @@
-# Use official Python image
-FROM python:3.12-slim
+# ---------- builder stage ----------
+FROM python:3.12-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies including C++ compiler for ChromaDB
-COPY requirements.txt .
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     build-essential \
     g++ \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+# Install CPU-only torch first, then the rest of the deps
+RUN pip install --no-cache-dir --timeout=300 torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir --timeout=300 -r requirements.txt
+
+# ---------- runtime stage ----------
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Create non-root user
+RUN useradd --create-home appuser
+USER appuser
 
 # Copy app code
-COPY ./app ./app
+COPY --chown=appuser:appuser ./app ./app
 
-# Expose port FastAPI will run on
 EXPOSE 8001
 
-# Command to run FastAPI with auto-reload for dev
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
-
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

@@ -1,4 +1,0 @@
-system_name,api_name,description,param_user_id,param_email,return_status,return_message
-User Management,createUser,Create a new user in the system,string,string,integer,string
-User Management,getUser,Get user details by ID,string,,integer,string
-Product System,createProduct,Add new product to catalog,string,number,integer,string

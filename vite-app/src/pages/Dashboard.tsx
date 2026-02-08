@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getWorkflows } from '../api/agents'
+import type { WorkflowSummary } from '../api/agents'
 
-// Mock workflow data
+// Mock workflow data (fallback)
 const mockWorkflows = [
     { id: '1', title: 'Customer Onboarding Flow', status: 'active', lastModified: '2 hours ago' },
     { id: '2', title: 'Data Processing Pipeline', status: 'active', lastModified: '5 hours ago' },
@@ -11,9 +13,21 @@ const mockWorkflows = [
     { id: '6', title: 'Report Generation System', status: 'archived', lastModified: '3 days ago' },
 ]
 
+interface DisplayWorkflow {
+    id: string
+    title: string
+    status: string
+    lastModified: string
+}
+
+function formatWorkflowName(name: string): string {
+    return name
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+}
+
 const Dashboard: React.FC = () => {
     const navigate = useNavigate()
-    const [searchQuery, setSearchQuery] = useState('')
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -50,39 +64,25 @@ const Dashboard: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Search Input at Top Right */}
-                <div className="relative w-full max-w-sm">
-                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                        type="text"
-                        placeholder="Search workflows..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 transition-all shadow-xl"
-                    />
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+                <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-6 border-2 border-[var(--border-primary)] hover:shadow-gold-500/20 transition-all duration-300">
+                    <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
+                        {mockWorkflows.filter(w => w.status === 'active').length}
+                    </div>
+                    <div className="text-base font-semibold text-[var(--text-secondary)]">Active Workflows</div>
                 </div>
-            </div>
 
-            {/* Content Section Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-                {/* Left/Center: Stats Tracker + Your Workflows (8 columns) */}
-                <div className="lg:col-span-8 space-y-8">
-                    {/* Stats Tracker - Now under Header */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-[#1a1a1a] rounded-2xl px-6 py-5 border-2 border-[#2a2a2a] text-center shadow-lg hover:border-green-500/20 transition-all">
-                            <div className="text-3xl font-bold text-green-400">{activeCount}</div>
-                            <div className="text-[11px] uppercase font-bold text-gray-500 mt-1 tracking-widest">Active</div>
-                        </div>
-                        <div className="bg-[#1a1a1a] rounded-2xl px-6 py-5 border-2 border-[#2a2a2a] text-center shadow-lg hover:border-amber-500/20 transition-all">
-                            <div className="text-3xl font-bold text-amber-400">{draftCount}</div>
-                            <div className="text-[11px] uppercase font-bold text-gray-500 mt-1 tracking-widest">Drafts</div>
-                        </div>
-                        <div className="bg-[#1a1a1a] rounded-2xl px-6 py-5 border-2 border-[#2a2a2a] text-center shadow-lg hover:border-gold-500/20 transition-all">
-                            <div className="text-3xl font-bold text-gold-400">{mockWorkflows.length}</div>
-                            <div className="text-[11px] uppercase font-bold text-gray-500 mt-1 tracking-widest">Total</div>
-                        </div>
+                <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-6 border-2 border-[var(--border-primary)] hover:shadow-gold-500/20 transition-all duration-300">
+                    <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
+                        {mockWorkflows.filter(w => w.status === 'draft').length}
+                    </div>
+                    <div className="text-base font-semibold text-[var(--text-secondary)]">Drafts</div>
+                </div>
+
+                <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-6 border-2 border-[var(--border-primary)] hover:shadow-gold-500/20 transition-all duration-300">
+                    <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
+                        {mockWorkflows.length}
                     </div>
 
                     <div className="bg-[#141414] rounded-2xl border-2 border-[#262626] overflow-hidden shadow-2xl">
@@ -93,21 +93,26 @@ const Dashboard: React.FC = () => {
                             </span>
                         </div>
 
-                        <div className="divide-y-2 divide-[#262626]">
-                            {filteredWorkflows.map((workflow) => (
-                                <div
-                                    key={workflow.id}
-                                    onClick={() => navigate(`/workflow/${workflow.id}`)}
-                                    className="p-6 hover:bg-[#1a1a1a] transition-all cursor-pointer group flex items-center justify-between"
-                                >
-                                    <div>
-                                        <h3 className="text-lg font-medium text-white group-hover:text-gold-400 transition-colors mb-1">
-                                            {workflow.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500">
-                                            Last modified: {workflow.lastModified}
-                                        </p>
-                                    </div>
+            {/* Workflows List */}
+            <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-8 border-2 border-[var(--border-primary)]">
+                <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">Your Workflows</h2>
+
+                <div className="space-y-3">
+                    {mockWorkflows.map((workflow) => (
+                        <div
+                            key={workflow.id}
+                            onClick={() => navigate(`/workflow/${workflow.id}`)}
+                            className="group p-5 bg-[var(--bg-secondary)] rounded-xl border-2 border-[var(--border-secondary)] hover:border-gold-500/50 transition-all duration-200 cursor-pointer hover:scale-[1.01]"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1 group-hover:text-gold-400 transition-colors">
+                                        {workflow.title}
+                                    </h3>
+                                    <p className="text-xs text-[var(--text-tertiary)]">
+                                        Last modified: {workflow.lastModified}
+                                    </p>
+                                </div>
 
                                     <span className={`px-5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border-2 ${getStatusColor(workflow.status)}`}>
                                         {workflow.status}

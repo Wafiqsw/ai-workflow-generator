@@ -7,7 +7,6 @@ import uuid
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.mysql import get_db
 
 
 class NotificationService:

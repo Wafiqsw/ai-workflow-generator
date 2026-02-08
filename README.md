@@ -1,10 +1,10 @@
-# 🚀 Workflow Studio: AI-Powered Automation Engine
+# Workflow Studio: AI-Powered Automation Engine
 
 Workflow Studio is a premium fullstack platform designed to bridge natural language prompts and automated technical workflows. It leverages Vector Databases and LLMs to understand user intent and execute complex API-driven tasks.
 
 ---
 
-## 📺 System Preview
+## System Preview
 
 ### Core Interfaces
 | Dashboard | AI Chatbot |
@@ -17,7 +17,7 @@ Workflow Studio is a premium fullstack platform designed to bridge natural langu
 
 ---
 
-## 🧠 System Purpose & Flow
+## System Purpose & Flow
 
 The system is built around two primary engines that work in tandem to provide a seamless automation experience.
 
@@ -44,7 +44,7 @@ Once the system "knows" your APIs, users can simply describe what they want to a
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 <div align="center">
 
@@ -86,15 +86,15 @@ Containerized development and deployment
 
 </div>
 
-## 📋 Features
+## Features
 
-- ⚡ **AI Chat Interface** - Generate workflows using natural language
-- 🔍 **Semantic API Search** - Vector-based discovery of available tools
-- 🔄 **Staged Processing** - Visual feedback for background AI tasks
-- 🐳 **Fullstack Docker** - Seamless "it works on my machine" experience
-- 🔒 **Enterprise Ready** - Integrated health checks and type safety
+-  **AI Chat Interface** - Generate workflows using natural language
+-  **Semantic API Search** - Vector-based discovery of available tools
+-  **Staged Processing** - Visual feedback for background AI tasks
+-  **Fullstack Docker** - Seamless "it works on my machine" experience
+-  **Enterprise Ready** - Integrated health checks and type safety
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -120,24 +120,24 @@ docker-compose up -d
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| 🎨 Frontend | http://localhost:5173 | React application |
-| ⚡ Backend API | http://localhost:8000 | FastAPI server |
-| 📖 API Docs | http://localhost:8000/docs | Interactive API documentation |
+|  Frontend | http://localhost:5173 | React application |
+|  Backend API | http://localhost:8000 | FastAPI server |
+|  API Docs | http://localhost:8000/docs | Interactive API documentation |
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 fullstack-setup/
-├── 🐳 docker-compose.yml      # Service orchestration
-├── 📝 .env.example            # Environment template
-├── 📚 docs/
+├──  docker-compose.yml      # Service orchestration
+├──  .env.example            # Environment template
+├──  docs/
 │   ├── images/                # Screenshots and flowcharts
 │   └── DOCKER_GUIDE.md        # Complete Docker documentation
-├── 🔧 fastapi-app/            # Backend service
-└── ⚛️ vite-app/               # Frontend service
+├──  fastapi-app/            # Backend service
+└──  vite-app/               # Frontend service
 ```
 
-## 🆘 Support
+##  Support
 
 For issues and questions:
 - Check the [Docker Guide](docs/DOCKER_GUIDE.md)
@@ -147,7 +147,7 @@ For issues and questions:
 
 <div align="center">
 
-**Built with ❤️ for AI-Driven Automation**
+**Built with determination for AI-Driven Automation**
 
 ⭐ Star this repo if you find it helpful!
 

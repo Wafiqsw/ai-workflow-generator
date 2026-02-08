@@ -3,6 +3,7 @@ from app.api.test import router as test_router
 from app.api.csv import router as csv_router
 from app.api.mysql import router as mysql_router
 from app.api.chroma import router as chroma_router
+from app.api.agents import router as agents_router
 from app.api.user_api import router as user_router
 from app.api.payment_api import router as payment_router
 from app.api.notification_api import router as notification_router
@@ -40,6 +41,7 @@ app.include_router(test_router)
 app.include_router(csv_router)
 app.include_router(mysql_router)
 app.include_router(chroma_router)
+app.include_router(agents_router)
 app.include_router(user_router)
 app.include_router(payment_router)
 app.include_router(notification_router)

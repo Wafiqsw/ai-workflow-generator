@@ -64,7 +64,8 @@ def background_csv_processor(job_id: str, file_content: bytes, filename: str):
                 is_duplicate = False
                 if sim_results and len(sim_results) > 0:
                     best_match = sim_results[0]
-                    if best_match.get('score', 1.0) < 0.1: 
+                    # hybrid_distance 0.0 means exact or very close match
+                    if best_match.get('hybrid_distance', 1.0) < 0.05: 
                         is_duplicate = True
                 
                 if is_duplicate:
