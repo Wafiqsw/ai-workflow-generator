@@ -28,6 +28,7 @@ function formatWorkflowName(name: string): string {
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate()
+    const [searchQuery, setSearchQuery] = useState('')
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -63,6 +64,7 @@ const Dashboard: React.FC = () => {
                         Manage and monitor your workflows
                     </p>
                 </div>
+            </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
@@ -84,7 +86,14 @@ const Dashboard: React.FC = () => {
                     <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-accent-500 mb-2">
                         {mockWorkflows.length}
                     </div>
+                    <div className="text-base font-semibold text-[var(--text-secondary)]">Total Workflows</div>
+                </div>
+            </div>
 
+            {/* Main Content: Workflows List + Progress Gauge */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left: Workflows List (8 columns) */}
+                <div className="lg:col-span-8">
                     <div className="bg-[#141414] rounded-2xl border-2 border-[#262626] overflow-hidden shadow-2xl">
                         <div className="p-6 border-b-2 border-[#262626] flex justify-between items-center bg-[#1a1a1a]/50">
                             <h2 className="text-xl font-semibold text-white">Your Workflows</h2>
@@ -93,30 +102,26 @@ const Dashboard: React.FC = () => {
                             </span>
                         </div>
 
-            {/* Workflows List */}
-            <div className="backdrop-blur-xl bg-[var(--bg-tertiary)] rounded-2xl p-8 border-2 border-[var(--border-primary)]">
-                <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">Your Workflows</h2>
-
-                <div className="space-y-3">
-                    {mockWorkflows.map((workflow) => (
-                        <div
-                            key={workflow.id}
-                            onClick={() => navigate(`/workflow/${workflow.id}`)}
-                            className="group p-5 bg-[var(--bg-secondary)] rounded-xl border-2 border-[var(--border-secondary)] hover:border-gold-500/50 transition-all duration-200 cursor-pointer hover:scale-[1.01]"
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1 group-hover:text-gold-400 transition-colors">
-                                        {workflow.title}
-                                    </h3>
-                                    <p className="text-xs text-[var(--text-tertiary)]">
-                                        Last modified: {workflow.lastModified}
-                                    </p>
-                                </div>
-
-                                    <span className={`px-5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border-2 ${getStatusColor(workflow.status)}`}>
-                                        {workflow.status}
-                                    </span>
+                        <div className="space-y-3 p-6">
+                            {filteredWorkflows.map((workflow) => (
+                                <div
+                                    key={workflow.id}
+                                    onClick={() => navigate(`/workflow/${workflow.id}`)}
+                                    className="group p-5 bg-[var(--bg-secondary)] rounded-xl border-2 border-[var(--border-secondary)] hover:border-gold-500/50 transition-all duration-200 cursor-pointer hover:scale-[1.01]"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1 group-hover:text-gold-400 transition-colors">
+                                                {workflow.title}
+                                            </h3>
+                                            <p className="text-xs text-[var(--text-tertiary)]">
+                                                Last modified: {workflow.lastModified}
+                                            </p>
+                                        </div>
+                                        <span className={`px-5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border-2 ${getStatusColor(workflow.status)}`}>
+                                            {workflow.status}
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
                             {filteredWorkflows.length === 0 && (
